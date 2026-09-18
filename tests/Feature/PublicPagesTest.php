@@ -2,11 +2,26 @@
 
 namespace Tests\Feature;
 
+use Database\Seeders\ContentSeeder;
+use Database\Seeders\ProfileSeeder;
+use Database\Seeders\PublicationSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class PublicPagesTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(ProfileSeeder::class);
+        $this->seed(ContentSeeder::class);
+        $this->seed(PublicationSeeder::class);
+    }
+
     /**
      * Every public route from PLAN.md, with a phrase that proves the right
      * template rendered.

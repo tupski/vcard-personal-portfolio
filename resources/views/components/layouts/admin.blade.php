@@ -8,7 +8,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ? $title.' — '.__('Admin').' — '.config('app.name') : __('Admin').' — '.config('app.name') }}</title>
+    <title>{{ $title ? $title.' — '.__('Admin').' — '.$siteName : __('Admin').' — '.$siteName }}</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 

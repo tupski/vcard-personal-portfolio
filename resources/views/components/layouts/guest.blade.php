@@ -9,7 +9,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ? $title.' — '.config('app.name') : config('app.name') }}</title>
+    <title>{{ $title ? $title.' — '.$siteName : $siteName }}</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 
@@ -24,7 +24,7 @@
         <div class="rounded-2xl border border-jet/50 bg-gradient-onyx p-6 shadow-card-1 sm:p-8">
             <header class="mb-6">
                 <p class="text-fs-7 uppercase tracking-[0.2em] text-brand">
-                    {{ config('app.name') }}
+                    {{ $siteName }}
                 </p>
 
                 <h1 class="mt-2 text-fs-1 font-semibold text-white-1">
