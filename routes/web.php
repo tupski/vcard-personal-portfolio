@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PageController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -9,12 +9,18 @@ use Illuminate\Support\Facades\Route;
 | Public routes
 |--------------------------------------------------------------------------
 |
-| These mirror the original vCard navigation. Only the home route is wired
-| up in Phase 1; the remaining sections land in Phase 2.
+| The original template switched between sections with JavaScript
+| (`data-nav-link` / `data-page`). Each section is now a real route so Turbo
+| Drive can navigate, browser history works, and every page is directly
+| linkable and refreshable.
 |
 */
 
-Route::get('/', HomeController::class)->name('home');
+Route::get('/', [PageController::class, 'home'])->name('home');
+Route::get('/resume', [PageController::class, 'resume'])->name('resume');
+Route::get('/portfolio', [PageController::class, 'portfolio'])->name('portfolio');
+Route::get('/blog', [PageController::class, 'blog'])->name('blog');
+Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 
 /*
 |--------------------------------------------------------------------------
