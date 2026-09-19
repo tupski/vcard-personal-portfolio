@@ -1,6 +1,6 @@
 <x-admin.page
     :heading="__('Messages')"
-    :subheading="__('Contact form inbox. Email replies arrive in Phase 7.')">
+    :subheading="__('Messages submitted through the public contact form.')">
 
     <div class="mb-4 flex flex-wrap items-center gap-2">
         <x-ui.button :href="route('admin.contact-messages.index')" variant="{{ request('filter') !== 'unread' ? 'brand' : 'secondary' }}" size="sm">
@@ -25,7 +25,9 @@
                         <span class="text-fs-8 font-normal text-light-gray/60">{{ $msg->email }}</span>
                     </p>
 
-                    <p class="mt-1 line-clamp-1 text-fs-7 text-light-gray/70">{{ $msg->message }}</p>
+                    <p class="mt-1 truncate text-fs-6 text-light-gray">{{ $msg->displaySubject() }}</p>
+
+                    <p class="mt-1 line-clamp-1 text-fs-7 text-light-gray/60">{{ $msg->message }}</p>
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2">

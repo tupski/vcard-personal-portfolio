@@ -30,11 +30,14 @@ DOM state (`page.waitForFunction`) for Turbo visits that restore from the
 snapshot cache without any network request — so it is deterministic, with no
 arbitrary sleeps and no `waitForTimeout` anywhere.
 
-221 checks: login, dashboard metrics, Turbo navigation over all 15 admin
+238 checks: login, dashboard metrics, Turbo navigation over all 15 admin
 sections, history back/forward, active-nav state, full CRUD round trip
 reflected on the public frontend through the content layer, server-side
 validation with old input, visibility toggles, delete confirmation dialog,
-FK-protected delete, settings sync, the media library round trip (upload,
+FK-protected delete, settings sync, the public contact flow (disabled submit
+while incomplete, server validation with old input and `aria-invalid`, success
+notice, no resubmission on reload, and the message appearing in the admin
+inbox where it can be opened and read), the media library round trip (upload,
 metadata edit, delete), the public regression sweep (6 viewports × 5 routes:
 overflow, design tokens, filter, modal), and the SEO sweep — per-page title,
 description, canonical, robots, Open Graph and Twitter metadata plus valid

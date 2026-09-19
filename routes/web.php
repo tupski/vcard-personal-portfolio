@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,7 @@ Route::get('/resume', [PageController::class, 'resume'])->name('resume');
 Route::get('/portfolio', [PageController::class, 'portfolio'])->name('portfolio');
 Route::get('/blog', [PageController::class, 'blog'])->name('blog');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
 /*
 |--------------------------------------------------------------------------

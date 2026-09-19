@@ -419,6 +419,130 @@ function check(ok, msg, extra) {
         'public: testimonial modal still opens');
     await pubPage.close();
 
+    // ---- Contact form: validation, success, inbox ----------------------------
+    const contactPage = await ctx.newPage();
+
+    await contactPage.goto(BASE + '/contact', { waitUntil: 'networkidle' });
+    check(await contactPage.$eval('form.form', (f) => f.getAttribute('action').endsWith('/contact')),
+        'contact: form posts to /contact');
+    check(await contactPage.$('input[name="subject"]') !== null, 'contact: subject field present');
+    check(await contactPage.$('input[name="website"]') !== null, 'contact: honeypot field present');
+
+    // The Stimulus controller keeps the original disabled-until-valid
+    // behaviour, so an empty form cannot be submitted from the UI at all.
+    check(await contactPage.$eval('button.form-btn', (el) => el.disabled),
+        'contact: submit disabled while the form is incomplete');
+
+    // Server-side validation is authoritative, so exercise it through a real
+    // visitor path: fill values the browser accepts (required + email format)
+    // but the server rejects (minimum lengths). This is the case a client
+    // check cannot catch, which is exactly why the server validates.
+    await contactPage.fill('input[name="name"]', 'A');
+    await contactPage.fill('input[name="email"]', 'valid@example.com');
+    await contactPage.fill('input[name="subject"]', 'B');
+    await contactPage.fill('textarea[name="message"]', 'too short');
+
+    await contactPage.waitForFunction(
+        () => ! document.querySelector('button.form-btn').disabled,
+        null,
+        { timeout: 15_000 },
+    );
+
+    const invalidResp = contactPage.waitForResponse(
+        (r) => r.url().endsWith('/contact') && r.request().method() === 'POST',
+        { timeout: 15_000 },
+    );
+    await contactPage.click('button.form-btn');
+    await invalidResp;
+
+    // Turbo renders the 422 response after the fetch completes, so wait for
+    // the DOM to reflect it rather than reading a snapshot too early.
+    await contactPage.waitForSelector('.form-error', { timeout: 15_000 });
+
+    const invalidState = await contactPage.evaluate(() => ({
+        errors: Array.from(document.querySelectorAll('.form-error')).map((e) => e.textContent.trim()),
+        email: document.querySelector('input[name="email"]')?.value ?? '',
+        invalid: document.querySelectorAll('.form-input.is-invalid').length,
+        invalidAria: document.querySelectorAll('.form-input[aria-invalid="true"]').length,
+    }));
+
+    check(invalidState.errors.length > 0, 'contact: server validation errors rendered',
+        invalidState.errors.join(' | ').slice(0, 140));
+    check(invalidState.email === 'valid@example.com', 'contact: old input preserved', invalidState.email);
+    check(invalidState.invalid >= 2, 'contact: invalid fields marked', String(invalidState.invalid));
+    check(invalidState.invalidAria >= 2, 'contact: invalid fields exposed to assistive tech',
+        String(invalidState.invalidAria));
+
+    // Valid submission -> success notice.
+    await contactPage.goto(BASE + '/contact', { waitUntil: 'networkidle' });
+    await contactPage.fill('input[name="name"]', 'Browser QA Visitor');
+    await contactPage.fill('input[name="email"]', 'qa-visitor@example.com');
+    await contactPage.fill('input[name="subject"]', 'Browser QA subject');
+    await contactPage.fill('textarea[name="message"]', 'This message was submitted by the Playwright suite.');
+
+    await contactPage.waitForFunction(
+        () => ! document.querySelector('button.form-btn').disabled,
+        null,
+        { timeout: 15_000 },
+    );
+
+    const validResp = contactPage.waitForResponse(
+        (r) => r.url().endsWith('/contact') && r.request().method() === 'POST',
+        { timeout: 15_000 },
+    );
+    await contactPage.click('button.form-btn');
+    await validResp;
+    await contactPage.waitForSelector('.form-notice-success', { timeout: 15_000 });
+
+    check(true, 'contact: success notice shown');
+    check(await contactPage.$eval('input[name="name"]', (el) => el.value) === '',
+        'contact: form is cleared after success');
+
+    // Post/Redirect/Get: the response is a redirect, so a reload re-issues a
+    // GET and cannot resubmit the form.
+    const reloadResp = contactPage.waitForResponse(
+        (r) => r.url().endsWith('/contact') && r.request().method() === 'GET',
+        { timeout: 15_000 },
+    );
+    await contactPage.reload({ waitUntil: 'networkidle' });
+    await reloadResp;
+
+    check(await contactPage.$('.form-notice-success') === null,
+        'contact: reload does not resubmit (no stale success notice)');
+    check(await contactPage.$eval('input[name="name"]', (el) => el.value) === '',
+        'contact: reload shows an empty form');
+
+    // The message reached the existing Phase 4 inbox.
+    await page.goto(BASE + '/admin/contact-messages', { waitUntil: 'networkidle' });
+    check(await page.$eval('main', (el) => el.textContent.includes('Browser QA subject')),
+        'contact: message appears in the admin inbox');
+    check(await page.$eval('main', (el) => el.textContent.includes('qa-visitor@example.com')),
+        'contact: inbox shows the visitor address');
+
+    // Open the newest message (the row's own View link).
+    const messageHref = await page.$eval('main a[href*="/contact-messages/"]',
+        (el) => el.getAttribute('href'));
+    await page.click(`main a[href="${messageHref}"]`);
+    await page.waitForURL(/\/admin\/contact-messages\/\d+$/);
+
+    await page.waitForFunction(
+        () => document.querySelector('main article') !== null,
+        null,
+        { timeout: 15_000 },
+    );
+
+    check(await page.$eval('main', (el) => el.textContent.includes('This message was submitted by the Playwright suite.')),
+        'contact: message body visible when opened');
+    check(await page.$eval('main', (el) => el.textContent.includes('Browser QA Visitor')),
+        'contact: sender name visible when opened');
+
+    // The subject is the page heading, which lives in the admin header rather
+    // than inside <main>.
+    check(await page.$eval('header h1', (el) => el.textContent.trim()) === 'Browser QA subject',
+        'contact: subject used as the page heading');
+
+    await contactPage.close();
+
     // ---- Media: upload, metadata edit, delete -------------------------------
     await page.click('aside a[href$="/admin/media"]');
     await page.waitForURL('**/admin/media');

@@ -1221,6 +1221,59 @@ textarea.form-input::-webkit-resizer { display: none; }
 
 .form-btn:disabled:hover::before { background: var(--bg-gradient-jet); }
 
+/**
+ * PHASE 7 — contact form feedback.
+ *
+ * Additive only: every Phase 2 rule above is untouched. These styles use the
+ * template's own tokens (jet, bittersweet-shimmer, light-gray, the fs scale)
+ * so the new states look native to the design.
+ */
+
+.form-notice {
+  padding: 13px 20px;
+  border: 1px solid var(--jet);
+  border-radius: 14px;
+  font-size: var(--fs-6);
+  font-weight: var(--fw-500);
+  margin-bottom: 25px;
+}
+
+.form-notice-success {
+  border-color: var(--orange-yellow-crayola);
+  background: hsla(45, 100%, 72%, 0.08);
+  color: var(--orange-yellow-crayola);
+}
+
+.form-notice-error {
+  border-color: var(--bittersweet-shimmer);
+  background: hsla(0, 43%, 51%, 0.1);
+  color: var(--light-gray);
+}
+
+.form-input.is-invalid { border-color: var(--bittersweet-shimmer); }
+
+.form-error {
+  margin: -16px 0 20px;
+  color: var(--bittersweet-shimmer);
+  font-size: var(--fs-7);
+  font-weight: var(--fw-500);
+}
+
+/* The subject input sits between the paired inputs and the textarea, so it
+   needs the textarea's own bottom spacing rather than the grid's. */
+.form-subject { margin-bottom: 25px; }
+
+/* Honeypot: removed from view and from the accessibility tree, but still a
+   real field that automated fillers populate. Never display:none — some bots
+   skip those. */
+.form-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 
 
 

@@ -174,11 +174,13 @@ class DatabaseSchemaTest extends TestCase
         ContactMessage::query()->create([
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
+            'subject' => 'A subject line',
             'message' => 'Hello from the contact form.',
         ]);
 
         $this->assertDatabaseHas('contact_messages', [
             'email' => 'jane@example.com',
+            'subject' => 'A subject line',
             'is_read' => false,
         ]);
     }

@@ -1,4 +1,5 @@
-<x-admin.page :heading="__('Message from :name', ['name' => $message->name])">
+<x-admin.page :heading="$message->displaySubject()"
+              :subheading="__('Message from :name', ['name' => $message->name])">
     <article class="max-w-2xl space-y-5 rounded-xl border border-jet/50 bg-eerie-black-2/60 p-6">
         <header class="space-y-1 border-b border-jet/40 pb-4">
             <p class="text-fs-2 font-semibold text-white-1">{{ $message->name }}</p>
