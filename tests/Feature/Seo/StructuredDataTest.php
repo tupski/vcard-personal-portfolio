@@ -121,15 +121,14 @@ class StructuredDataTest extends TestCase
         $this->assertSame(config('app.url').'/resume', $crumbs['itemListElement'][1]['item']);
     }
 
-    public function test_blog_posting_is_not_invented(): void
+    public function test_blog_posting_is_not_emitted_on_listing_or_static_pages(): void
     {
-        // No public blog detail route exists, so no BlogPosting may be emitted.
+        // BlogPosting describes an individual article, so it belongs on the
+        // detail page only — never on the listing or the static pages.
         foreach (SeoManager::pageNames() as $name) {
-            $graphs = $this->graphs($name);
-
             $this->assertNull(
-                $this->findType($graphs, 'BlogPosting'),
-                "BlogPosting must not appear on {$name} without a detail route.",
+                $this->findType($this->graphs($name), 'BlogPosting'),
+                "BlogPosting must not appear on {$name}.",
             );
         }
     }

@@ -108,6 +108,184 @@ class SeoManager
     }
 
     /**
+     * Metadata for a published blog post's detail page.
+     *
+     * Built from the stored post rather than page copy: title, excerpt, image
+     * and publication date are the author's own content. `og:type` is
+     * `article` (the only page on the site that is one) and the JSON-LD adds a
+     * BlogPosting graph plus a Home -> Blog -> Post breadcrumb trail.
+     *
+     * @param  array<string, mixed>  $post  Repository post shape.
+     */
+    public function forPost(array $post): SeoData
+    {
+        $siteName = $this->defaults->siteName();
+        $title = trim((string) ($post['title'] ?? '')) ?: $siteName;
+        $description = trim((string) ($post['excerpt'] ?? '')) ?: $this->defaults->description();
+
+        $canonical = $this->canonicalForPath('blog/'.($post['slug'] ?? ''));
+
+        [$image, $width, $height] = $this->resolveImage($post['image'] ?? null);
+
+        return new SeoData(
+            title: $title,
+            description: $description,
+            canonical: $canonical,
+            robots: $this->defaults->robots(),
+            ogImage: $image,
+            ogImageWidth: $width,
+            ogImageHeight: $height,
+            ogImageAlt: $image !== null ? (trim((string) ($post['alt'] ?? '')) ?: $title) : null,
+            ogType: 'article',
+            ogSiteName: $siteName,
+            schemas: [
+                $this->blogPostingSchema($post, $title, $description, $canonical, $image),
+                $this->breadcrumbSchema([
+                    [$siteName, $this->defaults->baseUrl().'/'],
+                    [__('Blog'), $this->canonical('blog')],
+                    [$title, $canonical],
+                ]),
+            ],
+            locale: str_replace('_', '-', app()->getLocale()),
+        );
+    }
+
+    /**
+     * Absolute canonical URL for a literal public path.
+     *
+     * Used by content types whose URL is data-driven (blog slugs) rather than
+     * a named route, so the canonical is still built from the configured base
+     * URL and never from the request host.
+     */
+    public function canonicalForPath(string $path): string
+    {
+        $path = trim($path, '/');
+
+        return $path === '' ? $this->defaults->baseUrl().'/' : $this->defaults->baseUrl().'/'.$path;
+    }
+
+    /**
+     * BlogPosting JSON-LD for a real, published post.
+     *
+     * Every field comes from stored data: no fabricated dates (dateModified is
+     * emitted only when the post was actually edited after publication) and no
+     * invented author — the author is the profile row.
+     *
+     * @param  array<string, mixed>  $post
+     * @return array<string, mixed>
+     */
+    private function blogPostingSchema(
+        array $post,
+        string $title,
+        ?string $description,
+        string $canonical,
+        ?string $image,
+    ): array {
+        $published = trim((string) ($post['date_iso'] ?? ''));
+        $created = trim((string) ($post['created_iso'] ?? ''));
+        $updated = trim((string) ($post['updated_iso'] ?? ''));
+
+        $schema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'BlogPosting',
+            'headline' => $title,
+            'mainEntityOfPage' => [
+                '@type' => 'WebPage',
+                '@id' => $canonical,
+            ],
+            'url' => $canonical,
+            'author' => $this->authorSchema(),
+            'publisher' => [
+                '@type' => 'Organization',
+                'name' => $this->defaults->siteName(),
+                'url' => $this->defaults->baseUrl().'/',
+            ],
+        ];
+
+        if ($description !== null && $description !== '') {
+            $schema['description'] = $description;
+        }
+
+        if ($published !== '') {
+            $schema['datePublished'] = $published;
+        }
+
+        // Only when the row was genuinely edited after it was created AND
+        // after it was published. A freshly created post has
+        // updated_at === created_at, so seeding a post with a historical
+        // publication date does not fabricate a "modified today" claim.
+        if (
+            $updated !== '' && $created !== '' && $published !== ''
+            && $updated > $created
+            && $updated > $published
+        ) {
+            $schema['dateModified'] = $updated;
+        }
+
+        if ($image !== null) {
+            $schema['image'] = $image;
+        }
+
+        if (($post['category'] ?? '') !== '') {
+            $schema['articleSection'] = $post['category'];
+        }
+
+        return $schema;
+    }
+
+    /**
+     * Author node for article schemas, from the profile row.
+     *
+     * @return array<string, mixed>
+     */
+    private function authorSchema(): array
+    {
+        try {
+            $profile = $this->content->profile();
+        } catch (\Throwable) {
+            return ['@type' => 'Organization', 'name' => $this->defaults->siteName()];
+        }
+
+        $author = [
+            '@type' => 'Person',
+            'name' => $profile['name'] ?? null,
+            'url' => $this->canonical('home'),
+        ];
+
+        if (($profile['avatar'] ?? '') !== '') {
+            $author['image'] = $this->media->url($profile['avatar']);
+        }
+
+        return array_filter($author, static fn (mixed $v): bool => $v !== null && $v !== '');
+    }
+
+    /**
+     * BreadcrumbList from an ordered list of [name, url] pairs.
+     *
+     * @param  list<array{0: string, 1: string}>  $trail
+     * @return array<string, mixed>
+     */
+    private function breadcrumbSchema(array $trail): array
+    {
+        $items = [];
+
+        foreach (array_values($trail) as $i => [$name, $url]) {
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => $i + 1,
+                'name' => $name,
+                'item' => $url,
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $items,
+        ];
+    }
+
+    /**
      * Absolute canonical URL for a named public route.
      *
      * Built from the configured base URL (never the request host), so a
@@ -123,12 +301,17 @@ class SeoManager
             return $base.'/';
         }
 
-        // An unknown route name must never throw: the layout's fallback path
-        // can be reached from an error page, and a broken canonical is worse
-        // than a generic one.
-        $path = Route::has($routeName)
-            ? trim(route($routeName, absolute: false), '/')
-            : trim($routeName, '/');
+        // An unknown route name — or one that needs parameters we do not have
+        // (e.g. a detail route reached without a slug) — must never throw: the
+        // layout's fallback path can be reached from an error page, and a
+        // broken canonical is worse than a generic one.
+        try {
+            $path = Route::has($routeName)
+                ? trim(route($routeName, absolute: false), '/')
+                : trim($routeName, '/');
+        } catch (\Throwable) {
+            $path = '';
+        }
 
         return $path === '' ? $base.'/' : $base.'/'.$path;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Support\Seo;
 
+use App\Models\BlogPost;
 use App\Support\ContentRepository;
 use Illuminate\Support\Carbon;
 
@@ -64,9 +65,12 @@ class SitemapService
             $entries[] = ['loc' => $this->seo->canonical($name)];
         }
 
-        // Phase 8 extension point: published blog detail URLs go here, with
-        // `lastmod` from the post's real updated timestamp. No detail route
-        // exists today, so nothing is invented.
+        // Published blog detail URLs. `lastmod` is only attached when the post
+        // was genuinely edited after publication — the timestamp is read from
+        // the row, never derived from "now".
+        foreach ($this->blogEntries() as $entry) {
+            $entries[] = $entry;
+        }
 
         // Deterministic order (loc ascending) and a hard de-dupe guard.
         usort($entries, static fn (array $a, array $b): int => strcmp($a['loc'], $b['loc']));
@@ -84,6 +88,53 @@ class SitemapService
         }
 
         return $unique;
+    }
+
+    /**
+     * Published blog detail URLs.
+     *
+     * @return list<array{loc: string, lastmod?: string}>
+     */
+    private function blogEntries(): array
+    {
+        try {
+            $posts = BlogPost::query()
+                ->published()
+                ->ordered()
+                ->get(['slug', 'published_at', 'created_at', 'updated_at']);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $entries = [];
+
+        foreach ($posts as $post) {
+            $slug = trim((string) $post->slug);
+
+            if ($slug === '') {
+                continue;
+            }
+
+            $entry = ['loc' => $this->seo->canonicalForPath('blog/'.$slug)];
+
+            $published = $post->published_at?->toDateString();
+            $created = $post->created_at?->toDateString();
+            $updated = $post->updated_at?->toDateString();
+
+            // Only a genuine post-publication edit becomes lastmod; a freshly
+            // seeded row must not claim it changed today.
+            if (
+                $published !== null && $created !== null && $updated !== null
+                && $updated > $created
+                && $updated > $published
+            ) {
+                $entry['lastmod'] = $updated;
+            }
+
+            $entries[] = $entry;
+        }
+
+        return $entries;
     }
 
     /**

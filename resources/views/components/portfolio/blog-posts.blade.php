@@ -8,7 +8,7 @@
 
         @foreach ($posts as $post)
             <li class="blog-post-item">
-                <a href="#">
+                <a href="{{ $post['url'] }}">
 
                     <figure class="blog-banner-box">
                         <img src="{{ App\Support\PortfolioContent::mediaUrl($post['image']) }}"

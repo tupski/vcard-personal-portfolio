@@ -1115,6 +1115,142 @@ main {
 }
 
 
+/**
+ * PHASE 8 — blog detail page.
+ *
+ * Additive only: every Phase 2 blog-card rule above is untouched. These reuse
+ * the template's own tokens so the article reads as part of the same design.
+ */
+
+.blog-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  color: var(--light-gray-70);
+  font-size: var(--fs-7);
+}
+
+.blog-breadcrumb a { color: var(--light-gray-70); }
+.blog-breadcrumb a:hover { color: var(--orange-yellow-crayola); }
+
+.blog-post-meta {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+.blog-post-meta :is(.blog-category, time) {
+  color: var(--light-gray-70);
+  font-size: var(--fs-6);
+  font-weight: var(--fw-300);
+}
+
+.blog-post-meta .dot {
+  background: var(--light-gray-70);
+  width: 4px;
+  height: 4px;
+  border-radius: 4px;
+}
+
+.blog-post-banner {
+  width: 100%;
+  height: 200px;
+  margin-bottom: 25px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.blog-post-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.blog-post-excerpt {
+  margin-bottom: 20px;
+  color: var(--light-gray-70);
+  font-size: var(--fs-5);
+  font-weight: var(--fw-300);
+  line-height: 1.6;
+}
+
+/**
+ * The article body is escaped plain text. `pre-line` turns the author's own
+ * line breaks into rendered ones without parsing anything as HTML, so stored
+ * markup can never become live markup.
+ */
+.blog-post-body {
+  white-space: pre-line;
+  color: var(--light-gray);
+  font-size: var(--fs-6);
+  font-weight: var(--fw-300);
+  line-height: 1.7;
+  margin-bottom: 30px;
+}
+
+.blog-related { margin-bottom: 30px; }
+
+.blog-related-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.blog-related-item > a {
+  display: block;
+  padding: 15px 20px;
+  background: var(--border-gradient-onyx);
+  border-radius: 14px;
+  position: relative;
+  z-index: 1;
+  transition: var(--transition-1);
+}
+
+.blog-related-item > a::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: var(--bg-gradient-jet);
+  z-index: -1;
+  transition: var(--transition-1);
+}
+
+.blog-related-item > a:hover::before { background: var(--bg-gradient-yellow-2); }
+
+.blog-related-title {
+  display: block;
+  color: var(--white-2);
+  font-size: var(--fs-5);
+  font-weight: var(--fw-500);
+  margin-bottom: 6px;
+  transition: var(--transition-1);
+}
+
+.blog-related-item > a:hover .blog-related-title { color: var(--orange-yellow-crayola); }
+
+.blog-related-meta {
+  color: var(--light-gray-70);
+  font-size: var(--fs-7);
+  font-weight: var(--fw-300);
+}
+
+.blog-back a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--orange-yellow-crayola);
+  font-size: var(--fs-6);
+  font-weight: var(--fw-500);
+}
+
+/* The chevron points back up/left when used as a "back" affordance. */
+.blog-back .vcard-icon { transform: rotate(90deg); }
+
+
 
 
 
@@ -1806,6 +1942,10 @@ textarea.form-input::-webkit-resizer { display: none; }
    */
 
   .blog-banner-box { height: 230px; }
+
+  .blog-post-banner { height: 300px; }
+
+  .blog-related-list { grid-template-columns: 1fr 1fr; }
 
 }
 

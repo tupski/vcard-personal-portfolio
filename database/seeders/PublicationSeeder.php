@@ -63,6 +63,7 @@ class PublicationSeeder extends Seeder
                 'blog_category_id' => $blogCategory->id,
                 'title' => $post['title'],
                 'excerpt' => $post['text'],
+                'content' => $post['content'],
                 'image_path' => $post['image'],
                 'image_alt' => $post['alt'],
                 'published_at' => $post['date_iso'],

@@ -300,12 +300,83 @@ class ContentRepository
                 ->get()
                 ->map(fn (BlogPost $post): array => [
                     'title' => $post->title,
+                    'slug' => $post->slug,
+                    'url' => route('blog.show', $post->slug, absolute: false),
                     'category' => $post->category->name,
                     'date' => $post->display_date,
                     'date_iso' => $post->published_at->format('Y-m-d'),
                     'image' => $post->image_path,
                     'alt' => $post->image_alt,
                     'text' => $post->excerpt,
+                ])
+                ->all();
+        });
+    }
+
+    /**
+     * One published post, shaped for the detail page.
+     *
+     * Resolved by slug through the model scope so drafts and unknown slugs are
+     * indistinguishable (both 404). The category comes along on the same
+     * query, and the related posts below need no further lookups per post.
+     *
+     * @return array<string, mixed>
+     */
+    public function post(string $slug): array
+    {
+        return $this->memo('post:'.$slug, function () use ($slug): array {
+            $post = BlogPost::findPublishedBySlug($slug);
+
+            return [
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'category' => $post->category->name,
+                'category_slug' => $post->category->slug,
+                'date' => $post->display_date,
+                'date_iso' => $post->published_at->format('Y-m-d'),
+                'date_human' => $post->published_at->format('F j, Y'),
+                'created_iso' => $post->created_at?->toDateString(),
+                'updated_iso' => $post->updated_at?->toDateString(),
+                'image' => $post->image_path,
+                'alt' => $post->image_alt,
+                'excerpt' => $post->excerpt,
+                'body' => $post->body(),
+            ];
+        });
+    }
+
+    /**
+     * A small set of other published posts in the same category.
+     *
+     * Deterministic (explicit sort order, then id), excludes the current post,
+     * and capped so the detail page stays one cheap query. Empty when the
+     * category has nothing else — no fallback to unrelated content.
+     *
+     * @return list<array<string, string>>
+     */
+    public function relatedPosts(string $slug, int $limit = 3): array
+    {
+        return $this->memo('related:'.$slug.':'.$limit, function () use ($slug, $limit): array {
+            $post = BlogPost::findPublishedBySlug($slug);
+
+            return BlogPost::query()
+                ->published()
+                ->with('category')
+                ->where('blog_category_id', $post->blog_category_id)
+                ->whereKeyNot($post->getKey())
+                ->ordered()
+                ->limit($limit)
+                ->get()
+                ->map(fn (BlogPost $related): array => [
+                    'title' => $related->title,
+                    'slug' => $related->slug,
+                    'url' => route('blog.show', $related->slug, absolute: false),
+                    'category' => $related->category->name,
+                    'date' => $related->display_date,
+                    'date_iso' => $related->published_at->format('Y-m-d'),
+                    'image' => $related->image_path,
+                    'alt' => $related->image_alt,
+                    'text' => $related->excerpt,
                 ])
                 ->all();
         });

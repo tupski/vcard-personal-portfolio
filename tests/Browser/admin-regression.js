@@ -405,6 +405,138 @@ function check(ok, msg, extra) {
     const uniqueLocs = new Set(sitemapBody.match(/<loc>[^<]+<\/loc>/g) || []);
     check(locCount === uniqueLocs.size, 'seo: sitemap URLs are unique', `${locCount}/${uniqueLocs.size}`);
 
+    // ---- Blog detail: listing -> article, SEO, JSON-LD, safety --------------
+    await pubPage.setViewportSize({ width: 1280, height: 900 });
+    await pubPage.goto(BASE + '/blog', { waitUntil: 'networkidle' });
+
+    const firstPostHref = await pubPage.$eval('.blog-post-item > a', (el) => el.getAttribute('href'));
+    check(/^\/blog\/[a-z0-9-]+$/.test(firstPostHref), 'blog: listing links to a slug URL', firstPostHref);
+    check(await pubPage.$eval('.blog-post-item > a', (el) => el.getAttribute('href') !== '#'),
+        'blog: listing no longer uses a placeholder href');
+
+    // Turbo navigation from the listing into the article.
+    await Promise.all([
+        pubPage.waitForURL('**' + firstPostHref),
+        pubPage.click(`.blog-post-item > a[href="${firstPostHref}"]`),
+    ]);
+
+    await pubPage.waitForFunction(
+        () => document.querySelector('.blog-post-body') !== null,
+        null,
+        { timeout: 15_000 },
+    );
+
+    const article = await pubPage.evaluate(() => {
+        const canonical = document.querySelector('link[rel="canonical"]');
+        const graphs = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+            .map((s) => { try { return JSON.parse(s.textContent); } catch { return null; } })
+            .filter(Boolean);
+
+        return {
+            url: location.pathname,
+            title: document.title,
+            heading: document.querySelector('.article-title')?.textContent?.trim() ?? '',
+            canonical: canonical?.href ?? '',
+            description: document.querySelector('meta[name="description"]')?.content ?? '',
+            ogType: document.querySelector('meta[property="og:type"]')?.content ?? '',
+            ogUrl: document.querySelector('meta[property="og:url"]')?.content ?? '',
+            twitterCard: document.querySelector('meta[name="twitter:card"]')?.content ?? '',
+            banner: document.querySelector('.blog-post-banner img')?.getAttribute('src') ?? '',
+            bannerAlt: document.querySelector('.blog-post-banner img')?.getAttribute('alt') ?? '',
+            bannerWidth: document.querySelector('.blog-post-banner img')?.getAttribute('width') ?? '',
+            body: document.querySelector('.blog-post-body')?.textContent ?? '',
+            bodyInnerHtml: document.querySelector('.blog-post-body')?.innerHTML ?? '',
+            liveScripts: document.querySelectorAll('.blog-post-body script').length,
+            related: Array.from(document.querySelectorAll('.blog-related-item > a')).map((a) => a.getAttribute('href')),
+            back: document.querySelector('.blog-back a')?.getAttribute('href') ?? '',
+            types: graphs.map((g) => g['@type']),
+            posting: graphs.find((g) => g['@type'] === 'BlogPosting') ?? null,
+        };
+    });
+
+    const tag = 'blog detail';
+    check(article.url === firstPostHref, `${tag}: URL is the slug route`, article.url);
+    check(article.title.endsWith(' - Artupski Portfolio'), `${tag}: title`, article.title);
+    check(article.heading.length > 0, `${tag}: article heading present`, article.heading);
+    check(article.canonical.endsWith(firstPostHref), `${tag}: canonical matches the route`, article.canonical);
+    check(article.ogUrl === article.canonical, `${tag}: og:url matches canonical`);
+    check(article.description.length > 0, `${tag}: description present`);
+    check(article.ogType === 'article', `${tag}: og:type is article`, article.ogType);
+    check(article.twitterCard === 'summary_large_image', `${tag}: twitter card`, article.twitterCard);
+    check(article.banner.length > 0, `${tag}: featured image renders`, article.banner);
+    check(article.bannerAlt.length > 0, `${tag}: featured image has alt text`);
+    check(article.bannerWidth === '1200', `${tag}: featured image declares dimensions`);
+    check(article.body.trim().length > 80, `${tag}: article body renders`);
+    check(article.liveScripts === 0, `${tag}: body content is inert (no script elements)`);
+    check(article.types.includes('BlogPosting'), `${tag}: BlogPosting JSON-LD present`);
+    check(article.posting !== null && article.posting.headline === article.heading,
+        `${tag}: BlogPosting headline matches the article`);
+    check(article.posting !== null && typeof article.posting.datePublished === 'string',
+        `${tag}: BlogPosting has datePublished`);
+    check(article.posting !== null && !('dateModified' in article.posting),
+        `${tag}: BlogPosting omits a fabricated dateModified`);
+    check(article.related.length > 0 && !article.related.includes(firstPostHref),
+        `${tag}: related posts exclude the current article`);
+    check(article.back.endsWith('/blog'), `${tag}: back-to-blog affordance`, article.back);
+
+    // The article body must never contain live markup from stored content.
+    check(!/<script/i.test(article.bodyInnerHtml), `${tag}: no script markup in the body`);
+
+    // Back / forward across the Turbo visit must keep the article and its head.
+    await pubPage.goBack();
+    await pubPage.waitForFunction(
+        () => document.querySelector('.blog-posts-list') !== null,
+        null,
+        { timeout: 15_000 },
+    );
+    check((await pubPage.title()).startsWith('Blog - '), 'blog: back returns to the listing title');
+
+    await pubPage.goForward();
+    await pubPage.waitForFunction(
+        () => document.querySelector('.blog-post-body') !== null,
+        null,
+        { timeout: 15_000 },
+    );
+    check(await pubPage.title() === article.title, 'blog: forward restores the article title');
+    check(await pubPage.$eval('link[rel="canonical"]', (el) => el.href) === article.canonical,
+        'blog: forward restores the canonical');
+
+    // Hard refresh renders the same head as the Turbo visit.
+    await pubPage.reload({ waitUntil: 'networkidle' });
+    check(await pubPage.title() === article.title, 'blog: hard refresh keeps the title');
+    check(await pubPage.$eval('.blog-post-body', (el) => el.textContent.trim().length > 80),
+        'blog: hard refresh keeps the body');
+
+    // A missing slug 404s, and the sitemap carries the published slugs.
+    const missing = await pubPage.goto(BASE + '/blog/no-such-post-at-all');
+    check(missing.status() === 404, 'blog: unknown slug returns 404', String(missing.status()));
+
+    const sitemapForBlog = await pubPage.goto(BASE + '/sitemap.xml');
+    const blogSitemap = await pubPage.$eval('body', (el) => el.textContent);
+    check(sitemapForBlog.status() === 200, 'blog: sitemap still serves');
+    check(blogSitemap.includes(firstPostHref + '</loc>'),
+        'blog: sitemap lists the published detail URL');
+    check(!blogSitemap.includes('/blog/no-such-post-at-all'), 'blog: sitemap excludes unknown slugs');
+
+    // Responsive sweep for the detail page: the same Phase 2 invariants the
+    // static routes are held to (no horizontal overflow, design tokens, icons).
+    for (const width of [375, 390, 768, 1024, 1280, 1440]) {
+        await pubPage.setViewportSize({ width, height: 900 });
+        await pubPage.goto(BASE + firstPostHref, { waitUntil: 'networkidle' });
+
+        const geo = await pubPage.evaluate(() => ({
+            sw: document.documentElement.scrollWidth,
+            cw: document.documentElement.clientWidth,
+            bg: getComputedStyle(document.body).backgroundColor,
+            icons: document.querySelectorAll('.vcard-icon svg').length,
+        }));
+
+        const detailTag = `blog detail @${width}`;
+        check(geo.sw <= geo.cw + 1, `${detailTag}: no horizontal overflow`, `${geo.sw}/${geo.cw}`);
+        check(geo.bg === 'rgb(18, 18, 18)', `${detailTag}: smoky-black body`);
+        check(geo.icons > 0, `${detailTag}: icons render`);
+    }
+
     // Portfolio filter still works
     await pubPage.setViewportSize({ width: 1280, height: 900 });
     await pubPage.goto(BASE + '/portfolio', { waitUntil: 'networkidle' });

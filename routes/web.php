@@ -23,6 +23,12 @@ Route::get('/resume', [PageController::class, 'resume'])->name('resume');
 Route::get('/portfolio', [PageController::class, 'portfolio'])->name('portfolio');
 Route::get('/blog', [PageController::class, 'blog'])->name('blog');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+
+// Published blog posts. Declared after the listing so `/blog` is matched
+// first; the slug segment never accepts a numeric id as an identifier.
+Route::get('/blog/{slug}', [PageController::class, 'blogPost'])
+    ->where('slug', '[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*')
+    ->name('blog.show');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
 /*

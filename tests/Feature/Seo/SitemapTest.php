@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seo;
 
+use App\Models\BlogPost;
 use App\Models\Setting;
 use App\Support\Seo\SeoManager;
 use App\Support\Seo\SitemapService;
@@ -112,12 +113,35 @@ class SitemapTest extends TestCase
         }
     }
 
-    public function test_blog_detail_urls_are_not_invented(): void
+    public function test_published_blog_detail_urls_are_included(): void
     {
-        // Phase 8 owns blog detail routes; nothing should be guessed here.
-        foreach (app(SitemapService::class)->urls() as $entry) {
-            $this->assertStringNotContainsString('/blog/', $entry['loc']);
+        // Phase 8 publishes real detail pages, so their canonical URLs belong
+        // in the sitemap — one per published post, no duplicates.
+        $body = $this->get('/sitemap.xml')->assertOk()->getContent();
+
+        $posts = BlogPost::query()->published()->get();
+
+        $this->assertNotEmpty($posts);
+
+        foreach ($posts as $post) {
+            $this->assertStringContainsString(
+                '<loc>'.$this->base().'/blog/'.$post->slug.'</loc>',
+                $body,
+            );
         }
+
+        preg_match_all('#<loc>([^<]+)</loc>#', $body, $matches);
+        $this->assertSame(array_values(array_unique($matches[1])), $matches[1]);
+    }
+
+    public function test_draft_blog_posts_are_excluded_from_the_sitemap(): void
+    {
+        $draft = BlogPost::query()->firstOrFail();
+        $draft->update(['is_visible' => false, 'slug' => 'a-draft-post']);
+
+        $body = $this->get('/sitemap.xml')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('a-draft-post', $body);
     }
 
     public function test_extension_point_accepts_future_urls(): void
@@ -126,6 +150,23 @@ class SitemapTest extends TestCase
         $service = app(SitemapService::class);
 
         $this->assertIsArray($service->urls());
-        $this->assertCount(count(SeoManager::pageNames()), $service->urls());
+        $this->assertCount(
+            count(SeoManager::pageNames()) + BlogPost::query()->published()->count(),
+            $service->urls(),
+        );
+    }
+
+    public function test_lastmod_is_absent_until_a_post_is_genuinely_edited(): void
+    {
+        // A freshly seeded post must not claim it changed today.
+        $this->assertStringNotContainsString('<lastmod>', $this->get('/sitemap.xml')->getContent());
+
+        $post = BlogPost::query()->firstOrFail();
+        $post->forceFill(['created_at' => now()->subDays(10)])->saveQuietly();
+        $post->update(['title' => 'Edited after publication']);
+
+        $body = $this->get('/sitemap.xml')->getContent();
+
+        $this->assertStringContainsString('<lastmod>'.now()->toDateString().'</lastmod>', $body);
     }
 }

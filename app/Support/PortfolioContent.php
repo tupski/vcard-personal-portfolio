@@ -143,6 +143,26 @@ class PortfolioContent
     }
 
     /**
+     * One published blog post, shaped for the detail page.
+     *
+     * @return array<string, mixed>
+     */
+    public static function post(string $slug): array
+    {
+        return app(ContentRepository::class)->post($slug);
+    }
+
+    /**
+     * Other published posts in the same category, for the detail page.
+     *
+     * @return list<array<string, string>>
+     */
+    public static function relatedPosts(string $slug, int $limit = 3): array
+    {
+        return app(ContentRepository::class)->relatedPosts($slug, $limit);
+    }
+
+    /**
      * Resolve a content image path to a public URL through the media layer.
      */
     public static function mediaUrl(?string $path): string

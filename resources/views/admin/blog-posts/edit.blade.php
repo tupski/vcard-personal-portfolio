@@ -22,7 +22,7 @@
     <x-admin.field :label="__('Excerpt')" name="excerpt" :value="$item?->excerpt" rows="3" required />
 
     <x-admin.field :label="__('Content')" name="content" :value="$item?->content" rows="10"
-                   :help="__('Plain text body for the future single-post page.')" />
+                   :help="__('Article body. Plain text: line breaks are preserved, markup is shown as text, not rendered.')" />
 
     <x-admin.media-picker :label="__('Image')" name="image_path" :value="$item?->image_path" required />
 
