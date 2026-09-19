@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,20 @@ Route::get('/resume', [PageController::class, 'resume'])->name('resume');
 Route::get('/portfolio', [PageController::class, 'portfolio'])->name('portfolio');
 Route::get('/blog', [PageController::class, 'blog'])->name('blog');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+
+/*
+|--------------------------------------------------------------------------
+| Crawler endpoints
+|--------------------------------------------------------------------------
+|
+| Generated from the configured site URL rather than committed as static
+| files, so the production domain is never hard-coded and the sitemap can
+| grow with the content (Phase 8 adds blog detail URLs here).
+|
+*/
+
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
 
 /*
 |--------------------------------------------------------------------------

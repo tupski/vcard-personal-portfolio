@@ -1,6 +1,4 @@
-<x-layouts.portfolio
-    :title="__('About')"
-    :description="__('About Richard Hanrick — Creative Director and UI/UX Designer working in web development and print media.')">
+<x-layouts.portfolio :seo="$seo">
 
     <article class="about">
 

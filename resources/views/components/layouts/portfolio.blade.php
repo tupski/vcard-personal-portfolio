@@ -1,9 +1,15 @@
 @props([
-    'title' => null,
-    'description' => null,
-    'canonical' => null,
-    'robots' => 'index, follow',
+    'seo' => null,
 ])
+
+@php
+    /*
+     * Head metadata comes from the SeoManager via the page controller. The
+     * fallback keeps the layout usable from any template (and from tests)
+     * without a controller: it derives metadata from the current route name.
+     */
+    $seo ??= app(App\Support\Seo\SeoManager::class)->forPage(request()->route()?->getName() ?? 'home');
+@endphp
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -13,17 +19,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{{ $title ? $title.' - '.$siteName : $siteName }}</title>
-
-    @if ($description)
-        <meta name="description" content="{{ $description }}">
-    @endif
-
-    <meta name="robots" content="{{ $robots }}">
-
-    @if ($canonical)
-        <link rel="canonical" href="{{ $canonical }}">
-    @endif
+    <x-seo.meta :seo="$seo" />
 
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
 
@@ -45,6 +41,8 @@
             {{ $slot }}
         </div>
     </main>
+
+    <x-seo.json-ld :seo="$seo" />
 
 </body>
 

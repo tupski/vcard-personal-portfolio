@@ -1,6 +1,4 @@
-<x-layouts.portfolio
-    :title="__('Contact')"
-    :description="__('Get in touch with Richard Hanrick.')">
+<x-layouts.portfolio :seo="$seo">
 
     <article class="contact">
 

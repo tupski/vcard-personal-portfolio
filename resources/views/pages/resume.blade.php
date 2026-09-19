@@ -1,6 +1,4 @@
-<x-layouts.portfolio
-    :title="__('Resume')"
-    :description="__('Education, experience and skills of Richard Hanrick.')">
+<x-layouts.portfolio :seo="$seo">
 
     <article class="resume">
 

@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Seo\SeoData;
+use App\Support\Seo\SeoManager;
 use Illuminate\View\View;
 
 class PageController extends Controller
 {
+    public function __construct(
+        private readonly SeoManager $seo,
+    ) {}
+
     /**
      * About / landing page.
      */
     public function home(): View
     {
-        return view('pages.home');
+        return $this->page('home', 'pages.home');
     }
 
     /**
@@ -19,7 +25,7 @@ class PageController extends Controller
      */
     public function resume(): View
     {
-        return view('pages.resume');
+        return $this->page('resume', 'pages.resume');
     }
 
     /**
@@ -27,7 +33,7 @@ class PageController extends Controller
      */
     public function portfolio(): View
     {
-        return view('pages.portfolio');
+        return $this->page('portfolio', 'pages.portfolio');
     }
 
     /**
@@ -35,7 +41,7 @@ class PageController extends Controller
      */
     public function blog(): View
     {
-        return view('pages.blog');
+        return $this->page('blog', 'pages.blog');
     }
 
     /**
@@ -43,6 +49,28 @@ class PageController extends Controller
      */
     public function contact(): View
     {
-        return view('pages.contact');
+        return $this->page('contact', 'pages.contact');
+    }
+
+    /**
+     * Render a public page with its resolved SEO metadata.
+     *
+     * Metadata is built here, once, from the route name — the page template
+     * only forwards the value object to the layout, so a page can never
+     * disagree with its own <head>.
+     */
+    private function page(string $name, string $view): View
+    {
+        return view($view, [
+            'seo' => $this->seo->forPage($name),
+        ]);
+    }
+
+    /**
+     * Expose the metadata builder to the layout's fallback path.
+     */
+    public static function dataFor(string $name): SeoData
+    {
+        return app(SeoManager::class)->forPage($name);
     }
 }

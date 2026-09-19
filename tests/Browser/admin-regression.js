@@ -278,6 +278,133 @@ function check(ok, msg, extra) {
 
     check(pubErrs.length === 0, 'public: no page errors during sweep', pubErrs.join(' | '));
 
+    // ---- SEO: per-page metadata, canonical, robots --------------------------
+    const SEO_PAGES = [
+        { route: '/', title: 'About', canonical: '/' },
+        { route: '/resume', title: 'Resume', canonical: '/resume' },
+        { route: '/portfolio', title: 'Portfolio', canonical: '/portfolio' },
+        { route: '/blog', title: 'Blog', canonical: '/blog' },
+        { route: '/contact', title: 'Contact', canonical: '/contact' },
+    ];
+
+    await pubPage.setViewportSize({ width: 1280, height: 900 });
+
+    for (const page of SEO_PAGES) {
+        await pubPage.goto(BASE + page.route, { waitUntil: 'networkidle' });
+
+        const meta = await pubPage.evaluate(() => ({
+            title: document.title,
+            description: document.querySelector('meta[name="description"]')?.content ?? '',
+            robots: document.querySelector('meta[name="robots"]')?.content ?? '',
+            canonical: document.querySelector('link[rel="canonical"]')?.href ?? '',
+            ogTitle: document.querySelector('meta[property="og:title"]')?.content ?? '',
+            ogType: document.querySelector('meta[property="og:type"]')?.content ?? '',
+            ogUrl: document.querySelector('meta[property="og:url"]')?.content ?? '',
+            ogImage: document.querySelector('meta[property="og:image"]')?.content ?? '',
+            ogSiteName: document.querySelector('meta[property="og:site_name"]')?.content ?? '',
+            twitterCard: document.querySelector('meta[name="twitter:card"]')?.content ?? '',
+            twitterTitle: document.querySelector('meta[name="twitter:title"]')?.content ?? '',
+            jsonLd: Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map((s) => s.textContent),
+        }));
+
+        const tag = `seo ${page.route}`;
+        check(meta.title === `${page.title} - Artupski Portfolio`, `${tag}: title`, meta.title);
+        check(meta.description.length > 0, `${tag}: description present`);
+        check(meta.canonical.endsWith(page.canonical), `${tag}: canonical`, meta.canonical);
+        check(meta.ogTitle === page.title, `${tag}: og:title`, meta.ogTitle);
+        check(meta.ogType === 'website', `${tag}: og:type`);
+        check(meta.ogUrl === meta.canonical, `${tag}: og:url matches canonical`);
+        check(meta.ogImage.length > 0, `${tag}: og:image present`);
+        check(meta.ogSiteName === 'Artupski Portfolio', `${tag}: og:site_name`, meta.ogSiteName);
+        check(meta.twitterCard.length > 0, `${tag}: twitter:card`);
+        check(meta.twitterTitle === page.title, `${tag}: twitter:title`);
+        check(meta.jsonLd.length > 0, `${tag}: JSON-LD present`);
+        check(meta.jsonLd.every((j) => { try { return typeof JSON.parse(j) === 'object'; } catch { return false; } }),
+            `${tag}: JSON-LD is valid JSON`);
+    }
+
+    // robots metadata: indexable in production, noindex locally (this suite
+    // runs non-production, so the deterministic value is noindex,nofollow).
+    await pubPage.goto(BASE + '/', { waitUntil: 'networkidle' });
+    const robotsMeta = await pubPage.$eval('meta[name="robots"]', (el) => el.content);
+    check(robotsMeta === 'noindex, nofollow', 'seo: non-production pages are noindex', robotsMeta);
+
+    // ---- SEO: Turbo navigation updates <head> metadata ----------------------
+    // Start on one page, navigate via a real link (Turbo Drive), and confirm
+    // the head follows — no reload, no timers.
+    await pubPage.goto(BASE + '/', { waitUntil: 'networkidle' });
+    const homeCanonical = await pubPage.$eval('link[rel="canonical"]', (el) => el.href);
+
+    await Promise.all([
+        pubPage.waitForURL('**/resume'),
+        pubPage.click('.navbar a[href$="/resume"]'),
+    ]);
+
+    // Turbo merges <head> during render, which happens after the URL changes.
+    // Synchronise on the DOM itself (never on networkidle: a visit restored
+    // from Turbo's snapshot cache makes no requests, so networkidle resolves
+    // before the head has been swapped in).
+    await pubPage.waitForFunction(() => document.title === 'Resume - Artupski Portfolio', null, { timeout: 15_000 });
+
+    const afterNav = await pubPage.evaluate(() => ({
+        title: document.title,
+        canonical: document.querySelector('link[rel="canonical"]')?.href ?? '',
+        ogUrl: document.querySelector('meta[property="og:url"]')?.content ?? '',
+        ogTitle: document.querySelector('meta[property="og:title"]')?.content ?? '',
+        description: document.querySelector('meta[name="description"]')?.content ?? '',
+        robots: document.querySelector('meta[name="robots"]')?.content ?? '',
+    }));
+
+    check(afterNav.title === 'Resume - Artupski Portfolio', 'seo: Turbo nav updates title', afterNav.title);
+    check(afterNav.canonical.endsWith('/resume'), 'seo: Turbo nav updates canonical', afterNav.canonical);
+    check(afterNav.canonical !== homeCanonical, 'seo: canonical actually changed');
+    check(afterNav.ogUrl === afterNav.canonical, 'seo: Turbo nav updates og:url');
+    check(afterNav.ogTitle === 'Resume', 'seo: Turbo nav updates og:title');
+    check(afterNav.description.includes('Education'), 'seo: Turbo nav updates description');
+    check(afterNav.robots.length > 0, 'seo: Turbo nav keeps robots meta');
+
+    // Browser back / forward must restore the previous page's metadata.
+    // Each transition is synchronised on the resulting DOM state rather than
+    // on network activity, because Turbo can restore a page from its snapshot
+    // cache without issuing any request at all.
+    await pubPage.goBack();
+    await pubPage.waitForFunction(() => document.title === 'About - Artupski Portfolio', null, { timeout: 15_000 });
+    check(await pubPage.title() === 'About - Artupski Portfolio', 'seo: back restores title');
+    check(await pubPage.$eval('link[rel="canonical"]', (el) => el.href) === homeCanonical, 'seo: back restores canonical');
+
+    await pubPage.goForward();
+    await pubPage.waitForFunction(() => document.title === 'Resume - Artupski Portfolio', null, { timeout: 15_000 });
+    check(await pubPage.title() === 'Resume - Artupski Portfolio', 'seo: forward restores title');
+    check(await pubPage.$eval('link[rel="canonical"]', (el) => el.href).then((c) => c.endsWith('/resume')),
+        'seo: forward restores canonical');
+
+    // Hard refresh must render the same head as the Turbo visit.
+    await pubPage.reload();
+    await pubPage.waitForFunction(() => document.title === 'Resume - Artupski Portfolio', null, { timeout: 15_000 });
+    check(await pubPage.title() === 'Resume - Artupski Portfolio', 'seo: hard refresh keeps title');
+
+    // ---- SEO: crawler endpoints ---------------------------------------------
+    const robotsResp = await pubPage.goto(BASE + '/robots.txt');
+    check(robotsResp.status() === 200, 'seo: robots.txt responds 200');
+    const robotsBody = await pubPage.$eval('body', (el) => el.textContent);
+    check(robotsBody.includes('User-agent: *'), 'seo: robots.txt has user-agent');
+    check(robotsBody.includes('Sitemap:'), 'seo: robots.txt references the sitemap');
+    check(robotsBody.includes('/sitemap.xml'), 'seo: robots.txt sitemap URL present');
+
+    const sitemapResp = await pubPage.goto(BASE + '/sitemap.xml');
+    check(sitemapResp.status() === 200, 'seo: sitemap.xml responds 200');
+    const sitemapBody = await pubPage.$eval('body', (el) => el.textContent);
+    check(sitemapBody.includes('<urlset'), 'seo: sitemap.xml has urlset root');
+    for (const route of ['/resume', '/portfolio', '/blog', '/contact']) {
+        check(sitemapBody.includes(route + '</loc>'), `seo: sitemap lists ${route}`);
+    }
+    check(!sitemapBody.includes('/admin'), 'seo: sitemap excludes admin URLs');
+    check(!sitemapBody.includes('/login'), 'seo: sitemap excludes login');
+
+    const locCount = (sitemapBody.match(/<loc>/g) || []).length;
+    const uniqueLocs = new Set(sitemapBody.match(/<loc>[^<]+<\/loc>/g) || []);
+    check(locCount === uniqueLocs.size, 'seo: sitemap URLs are unique', `${locCount}/${uniqueLocs.size}`);
+
     // Portfolio filter still works
     await pubPage.setViewportSize({ width: 1280, height: 900 });
     await pubPage.goto(BASE + '/portfolio', { waitUntil: 'networkidle' });

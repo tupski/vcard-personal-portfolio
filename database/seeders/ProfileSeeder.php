@@ -43,5 +43,11 @@ class ProfileSeeder extends Seeder
             ['key' => 'contact.map_embed_url'],
             ['value' => SeedContent::mapEmbedUrl()],
         );
+
+        // SEO defaults (seo.default_description, seo.og_image, seo.site_url,
+        // seo.robots) are deliberately NOT seeded: the SEO layer falls back to
+        // the profile row, APP_URL and the template's own assets, so a fresh
+        // install already emits a complete, valid head. An admin only adds a
+        // row when they want to override that behaviour.
     }
 }

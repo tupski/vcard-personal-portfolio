@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\Concerns\AuthorizesAdminAccess;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Support\Seo\SeoDefaults;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -31,13 +32,25 @@ class SettingsController extends Controller
     ];
 
     /**
+     * Editable keys = site settings + the SEO defaults declared by the SEO
+     * layer itself. Declaring them there keeps the form, the validator and
+     * the reader in lockstep.
+     *
+     * @return array<string, array<int, string>>
+     */
+    private static function rules(): array
+    {
+        return self::EDITABLE + SeoDefaults::EDITABLE;
+    }
+
+    /**
      * Edit form.
      */
     public function edit(): View
     {
         $this->authorizeAdmin();
 
-        $settings = collect(self::EDITABLE)
+        $settings = collect(self::rules())
             ->map(fn (array $rules, string $key) => Setting::get($key, ''))
             ->all();
 
@@ -59,11 +72,15 @@ class SettingsController extends Controller
 
         $validated = [];
 
-        foreach (self::EDITABLE as $key => $keyRules) {
-            $validated[$key] = app('validator')->make(
+        foreach (self::rules() as $key => $keyRules) {
+            // Nullable SEO keys: an omitted field validates as null and is
+            // stored as an empty string so clearing a value really clears it.
+            $value = app('validator')->make(
                 ['key' => $input[$key] ?? null],
                 ['key' => $keyRules],
             )->validate()['key'];
+
+            $validated[$key] = $value ?? '';
         }
 
         foreach ($validated as $key => $value) {
