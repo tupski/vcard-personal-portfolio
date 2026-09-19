@@ -12,7 +12,7 @@
         'text-light-gray/80 hover:bg-white-1/5 hover:text-white-1' => ! $active,
    ]) }}>
     @if ($icon)
-        <span class="shrink-0 text-fs-7" aria-hidden="true">{{ $icon }}</span>
+        <x-dynamic-component :component="$icon" class="h-5 w-5 shrink-0" />
     @endif
 
     <span class="truncate">{{ $slot }}</span>

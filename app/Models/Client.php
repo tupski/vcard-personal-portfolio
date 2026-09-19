@@ -13,6 +13,7 @@ class Client extends Model
     use SortableAndVisible;
 
     protected $fillable = [
+        'name',
         'logo_path',
         'url',
         'sort_order',

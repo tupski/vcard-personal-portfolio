@@ -62,7 +62,7 @@
                     data-testimonials-target="close"
                     data-action="testimonials#close"
                     aria-label="{{ __('Close') }}">
-                <x-icon name="close-outline" />
+                <x-portfolio-icon name="close-outline" />
             </button>
 
             <div class="modal-img-wrapper">

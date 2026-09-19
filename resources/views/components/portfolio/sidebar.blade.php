@@ -34,7 +34,7 @@
                 aria-controls="sidebar-contacts">
             <span>{{ __('Show Contacts') }}</span>
 
-            <x-icon name="chevron-down" />
+            <x-portfolio-icon name="chevron-down" />
         </button>
 
     </div>
@@ -48,7 +48,7 @@
             <li class="contact-item">
 
                 <div class="icon-box">
-                    <x-icon name="mail-outline" />
+                    <x-portfolio-icon name="mail-outline" />
                 </div>
 
                 <div class="contact-info">
@@ -62,7 +62,7 @@
             <li class="contact-item">
 
                 <div class="icon-box">
-                    <x-icon name="phone-portrait-outline" />
+                    <x-portfolio-icon name="phone-portrait-outline" />
                 </div>
 
                 <div class="contact-info">
@@ -76,7 +76,7 @@
             <li class="contact-item">
 
                 <div class="icon-box">
-                    <x-icon name="calendar-outline" />
+                    <x-portfolio-icon name="calendar-outline" />
                 </div>
 
                 <div class="contact-info">
@@ -90,7 +90,7 @@
             <li class="contact-item">
 
                 <div class="icon-box">
-                    <x-icon name="location-outline" />
+                    <x-portfolio-icon name="location-outline" />
                 </div>
 
                 <div class="contact-info">
@@ -112,7 +112,7 @@
                     <a href="{{ $link['url'] }}"
                        class="social-link"
                        aria-label="{{ $link['label'] }}">
-                        <x-icon :name="$link['icon']" />
+                        <x-portfolio-icon :name="$link['icon']" />
                     </a>
                 </li>
             @endforeach

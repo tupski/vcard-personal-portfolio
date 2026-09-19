@@ -51,7 +51,7 @@
                   data-action="input->contact-form#validate"></textarea>
 
         <button class="form-btn" type="submit" disabled data-contact-form-target="submit">
-            <x-icon name="paper-plane" />
+            <x-portfolio-icon name="paper-plane" />
             <span>{{ __('Send Message') }}</span>
         </button>
 

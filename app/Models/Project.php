@@ -22,6 +22,11 @@ class Project extends Model
         'slug',
         'image_path',
         'image_alt',
+        'description',
+        'client',
+        'technologies',
+        'display_date',
+        'featured',
         'url',
         'sort_order',
         'is_visible',
@@ -30,6 +35,7 @@ class Project extends Model
     protected function casts(): array
     {
         return [
+            'featured' => 'boolean',
             'is_visible' => 'boolean',
         ];
     }

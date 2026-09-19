@@ -25,4 +25,22 @@ class ContactMessage extends Model
             'is_read' => 'boolean',
         ];
     }
+
+    /**
+     * Messages the admin has not read yet.
+     */
+    public function scopeUnread($query)
+    {
+        return $query->where('is_read', false);
+    }
+
+    /**
+     * Flag the message as read.
+     */
+    public function markAsRead(): void
+    {
+        if (! $this->is_read) {
+            $this->forceFill(['is_read' => true])->save();
+        }
+    }
 }

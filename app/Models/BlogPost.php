@@ -21,6 +21,7 @@ class BlogPost extends Model
         'title',
         'slug',
         'excerpt',
+        'content',
         'image_path',
         'image_alt',
         'published_at',

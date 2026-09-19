@@ -40,7 +40,7 @@
             <div class="select-value" data-portfolio-filter-target="value">{{ __('Select category') }}</div>
 
             <div class="select-icon">
-                <x-icon name="chevron-down" />
+                <x-portfolio-icon name="chevron-down" />
             </div>
 
         </button>
@@ -69,7 +69,7 @@
 
                     <figure class="project-img">
                         <div class="project-item-icon-box">
-                            <x-icon name="eye-outline" />
+                            <x-portfolio-icon name="eye-outline" />
                         </div>
 
                         <img src="{{ asset($project['image']) }}"

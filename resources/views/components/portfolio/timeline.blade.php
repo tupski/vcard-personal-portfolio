@@ -8,7 +8,7 @@
 
     <div class="title-wrapper">
         <div class="icon-box">
-            <x-icon :name="$icon" />
+            <x-portfolio-icon :name="$icon" />
         </div>
 
         <h3 class="h3">{{ $title }}</h3>

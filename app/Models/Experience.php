@@ -8,4 +8,13 @@ namespace App\Models;
 class Experience extends TimelineEntry
 {
     protected $table = 'experiences';
+
+    protected $fillable = [
+        'title',
+        'company',
+        'period',
+        'description',
+        'sort_order',
+        'is_visible',
+    ];
 }

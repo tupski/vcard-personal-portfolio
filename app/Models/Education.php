@@ -8,4 +8,13 @@ namespace App\Models;
 class Education extends TimelineEntry
 {
     protected $table = 'educations';
+
+    protected $fillable = [
+        'title',
+        'institution',
+        'period',
+        'description',
+        'sort_order',
+        'is_visible',
+    ];
 }
