@@ -15,7 +15,7 @@
     <div class="sidebar-info">
 
         <figure class="avatar-box">
-            <img src="{{ asset($profile['avatar']) }}"
+            <img src="{{ App\Support\PortfolioContent::mediaThumbUrl($profile['avatar']) }}"
                  alt="{{ $profile['name'] }}"
                  width="80">
         </figure>

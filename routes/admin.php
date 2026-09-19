@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EducationController;
 use App\Http\Controllers\Admin\ExperienceController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ProjectCategoryController;
 use App\Http\Controllers\Admin\ProjectController;
@@ -47,6 +48,7 @@ Route::resource('projects', ProjectController::class)->except('show');
 Route::resource('blog-categories', BlogCategoryController::class)->except('show');
 Route::resource('blog-posts', BlogPostController::class)->except('show');
 Route::resource('social-links', SocialLinkController::class)->except('show');
+Route::resource('media', MediaController::class)->except('show')->parameters(['media' => 'medium']);
 
 // Inbox (custom, not a CRUD resource).
 Route::get('contact-messages', [ContactMessageController::class, 'index'])->name('contact-messages.index');

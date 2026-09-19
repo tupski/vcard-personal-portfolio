@@ -39,7 +39,7 @@
             type="{{ $type }}"
             name="{{ $name }}"
             id="{{ $id }}"
-            value="{{ old($name, $value) }}"
+            @if ($type !== 'file') value="{{ old($name, $value) }}" @endif
             @if ($placeholder) placeholder="{{ $placeholder }}" @endif
             @if ($required) required @endif
             @if ($hasError) aria-invalid="true" aria-describedby="{{ $id }}-error" @endif

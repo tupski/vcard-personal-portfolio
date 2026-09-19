@@ -320,6 +320,24 @@ class ContentRepository
     }
 
     /**
+     * Resolve a content image path to a public URL through the media layer.
+     * Static template paths (assets/…) pass through unchanged, so the Phase 2
+     * output is byte-identical for untouched content.
+     */
+    public function mediaUrl(?string $path): string
+    {
+        return app(MediaService::class)->url((string) $path);
+    }
+
+    /**
+     * Thumb variant URL for a content image path.
+     */
+    public function mediaThumbUrl(?string $path): string
+    {
+        return app(MediaService::class)->thumbUrl((string) $path);
+    }
+
+    /**
      * Memoise a repository result for the current request.
      *
      * @template T

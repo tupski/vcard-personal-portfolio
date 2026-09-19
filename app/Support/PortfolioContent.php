@@ -143,6 +143,22 @@ class PortfolioContent
     }
 
     /**
+     * Resolve a content image path to a public URL through the media layer.
+     */
+    public static function mediaUrl(?string $path): string
+    {
+        return app(ContentRepository::class)->mediaUrl($path);
+    }
+
+    /**
+     * Thumb variant URL for a content image path.
+     */
+    public static function mediaThumbUrl(?string $path): string
+    {
+        return app(ContentRepository::class)->mediaThumbUrl($path);
+    }
+
+    /**
      * Contact page map embed.
      */
     public static function mapEmbedUrl(): string

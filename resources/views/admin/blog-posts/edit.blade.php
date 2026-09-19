@@ -24,8 +24,7 @@
     <x-admin.field :label="__('Content')" name="content" :value="$item?->content" rows="10"
                    :help="__('Plain text body for the future single-post page.')" />
 
-    <x-admin.field :label="__('Image path')" name="image_path" :value="$item?->image_path" required
-                   :help="__('Path under public/, e.g. assets/images/blog-1.jpg')" />
+    <x-admin.media-picker :label="__('Image')" name="image_path" :value="$item?->image_path" required />
 
     <x-admin.field :label="__('Image alt text')" name="image_alt" :value="$item?->image_alt" required />
 

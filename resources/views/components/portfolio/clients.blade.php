@@ -11,7 +11,7 @@
         @foreach ($clients as $logo)
             <li class="clients-item">
                 <a href="#">
-                    <img src="{{ asset($logo) }}" alt="client logo" loading="lazy">
+                    <img src="{{ App\Support\PortfolioContent::mediaUrl($logo) }}" alt="client logo" loading="lazy">
                 </a>
             </li>
         @endforeach

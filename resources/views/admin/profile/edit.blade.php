@@ -9,8 +9,7 @@
         <x-admin.field :label="__('Title / role')" name="title" :value="$profile->title" required />
     </div>
 
-    <x-admin.field :label="__('Avatar path')" name="avatar_path" :value="$profile->avatar_path" required
-                   :help="__('Path under public/, e.g. assets/images/my-avatar.png')" />
+    <x-admin.media-picker :label="__('Avatar')" name="avatar_path" :value="$profile->avatar_path" required />
 
     <div class="grid gap-4 sm:grid-cols-2">
         <x-admin.field :label="__('Email')" name="email" type="email" :value="$profile->email" required />

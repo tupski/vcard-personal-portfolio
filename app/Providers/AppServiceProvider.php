@@ -7,6 +7,8 @@ use App\Support\ContentRepository;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
         // Single instance per request: the repository memoises its queries so
         // the many Blade components that consume it never duplicate work.
         $this->app->singleton(ContentRepository::class);
+
+        // Intervention Image v4 with the GD driver (bundled with PHP, no
+        // Imagick requirement — keeps shared hosting workable).
+        $this->app->singleton(ImageManager::class, fn () => new ImageManager(new GdDriver));
     }
 
     /**

@@ -20,7 +20,7 @@
                          data-action="click->testimonials#open keydown.enter->testimonials#open keydown.space->testimonials#open">
 
                         <figure class="testimonials-avatar-box">
-                            <img src="{{ asset($testimonial['avatar']) }}"
+                            <img src="{{ App\Support\PortfolioContent::mediaThumbUrl($testimonial['avatar']) }}"
                                  alt="{{ $testimonial['name'] }}"
                                  width="60"
                                  data-testimonials-avatar>
@@ -67,7 +67,7 @@
 
             <div class="modal-img-wrapper">
                 <figure class="modal-avatar-box">
-                    <img src="{{ asset($testimonials[0]['avatar']) }}"
+                    <img src="{{ App\Support\PortfolioContent::mediaThumbUrl($testimonials[0]['avatar']) }}"
                          alt="{{ $testimonials[0]['name'] }}"
                          width="80"
                          data-testimonials-target="img">

@@ -9,7 +9,7 @@
 
         <x-admin.field :label="__('Author name')" name="name" :value="$item?->name" required />
 
-        <x-admin.field :label="__('Avatar path')" name="avatar_path" :value="$item?->avatar_path" required :help="__('Path under public/, e.g. assets/images/avatar-1.png')" />
+        <x-admin.media-picker :label="__('Avatar')" name="avatar_path" :value="$item?->avatar_path" required />
 
         <x-admin.field :label="__('Date (ISO)')" name="testimonial_date" :value="$item?->testimonial_date?->format('Y-m-d") required type="date" />
 

@@ -72,7 +72,7 @@
                             <x-portfolio-icon name="eye-outline" />
                         </div>
 
-                        <img src="{{ asset($project['image']) }}"
+                        <img src="{{ App\Support\PortfolioContent::mediaUrl($project['image']) }}"
                              alt="{{ $project['alt'] }}"
                              loading="lazy">
                     </figure>

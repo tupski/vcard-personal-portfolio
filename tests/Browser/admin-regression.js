@@ -1,7 +1,7 @@
 /**
  * Phase 4 verification: admin panel behaviour + public regression.
  */
-const { chromium } = require('playwright');
+import { chromium } from 'playwright';
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8000';
 const CHROME = process.env.CHROME_PATH
@@ -291,6 +291,66 @@ function check(ok, msg, extra) {
     check(await pubPage.$eval('.modal-container', (el) => el.classList.contains('active')),
         'public: testimonial modal still opens');
     await pubPage.close();
+
+    // ---- Media: upload, metadata edit, delete -------------------------------
+    await page.click('aside a[href$="/admin/media"]');
+    await page.waitForURL('**/admin/media');
+    const mediaEmpty = await page.$eval('main', (el) => el.textContent.includes('No media yet'));
+    check(mediaEmpty, 'media: empty state renders');
+
+    // Upload a real PNG (1x1 pixel) through the form input.
+    await page.setInputFiles('input[name="file"]', {
+        name: 'regression.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+            'base64',
+        ),
+    });
+    await page.fill('input[name="alt_text"]', 'Regression upload');
+    const uploadResp = page.waitForResponse(
+        (r) => r.url().endsWith('/admin/media') && r.request().method() === 'POST',
+        { timeout: 15_000 },
+    );
+    await page.click('form[enctype="multipart/form-data"] button[type="submit"]');
+    await uploadResp;
+    await page.waitForLoadState('networkidle');
+    check(true, 'media: upload accepted');
+
+    await page.reload({ waitUntil: 'networkidle' });
+    const cardVisible = await page.$$eval('main img', (imgs) => imgs.some((img) => img.src.includes('/storage/media/')));
+    check(cardVisible, 'media: uploaded image rendered from /storage');
+
+    // Metadata edit
+    await page.click('a[href$="/edit"]');
+    await page.waitForURL('**/admin/media/**/edit');
+    await page.fill('input[name="alt_text"]', 'Edited alt text');
+    const editResp = page.waitForResponse(
+        (r) => /\/admin\/media\/\d+$/.test(r.url()) && r.request().method() === 'POST',
+        { timeout: 15_000 },
+    );
+    await page.click('main form button[type="submit"]');
+    await editResp;
+    await page.waitForLoadState('networkidle');
+
+    await page.reload({ waitUntil: 'networkidle' });
+    check(await page.$eval('input[name="alt_text"]', (el) => el.value === 'Edited alt text'),
+        'media: metadata edit persisted');
+
+    // Delete (original + variants removed server-side)
+    await page.click('aside a[href$="/admin/media"]');
+    await page.waitForURL('**/admin/media');
+    page.once('dialog', (d) => d.accept());
+    const mediaDelete = page.waitForResponse(
+        (r) => /\/admin\/media\/\d+$/.test(r.url()) && r.request().method() === 'POST',
+        { timeout: 15_000 },
+    );
+    await page.locator('tbody form[data-turbo-confirm] button, form[data-turbo-confirm] button').last().click();
+    await mediaDelete;
+    await page.waitForLoadState('networkidle');
+    await page.reload({ waitUntil: 'networkidle' });
+    const cleared = await page.$eval('main', (el) => el.textContent.includes('No media yet'));
+    check(cleared, 'media: delete clears the library');
 
     // ---- Auth guard after logout ---------------------------------------------
     await page.click('header form button');

@@ -16,6 +16,7 @@
         ['label' => __('Testimonials'), 'route' => 'admin.testimonials.index', 'icon' => 'heroicon-m-chat-bubble-left-ellipsis'],
         ['label' => __('Clients'), 'route' => 'admin.clients.index', 'icon' => 'heroicon-m-building-office-2'],
         ['label' => __('Social Links'), 'route' => 'admin.social-links.index', 'icon' => 'heroicon-m-link'],
+        ['label' => __('Media'), 'route' => 'admin.media.index', 'icon' => 'heroicon-m-photo'],
         ['label' => __('Messages'), 'route' => 'admin.contact-messages.index', 'icon' => 'heroicon-m-inbox-arrow-down'],
         ['label' => __('Settings'), 'route' => 'admin.settings.edit', 'icon' => 'heroicon-m-cog-6-tooth'],
     ];

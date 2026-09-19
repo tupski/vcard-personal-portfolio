@@ -9,7 +9,7 @@
 
         <x-admin.field :label="__('Name')" name="name" :value="$item?->name" :help="__('Internal reference; optional.')" />
 
-        <x-admin.field :label="__('Logo path')" name="logo_path" :value="$item?->logo_path" required :help="__('Path under public/, e.g. assets/images/logo-1-color.png')" />
+        <x-admin.media-picker :label="__('Logo')" name="logo_path" :value="$item?->logo_path" required />
 
         <x-admin.field :label="__('URL')" name="url" :value="$item?->url" type="url" />
 

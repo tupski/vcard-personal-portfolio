@@ -19,8 +19,7 @@
     <x-admin.field :label="__('Slug')" name="slug" :value="$item?->slug"
                    :help="__('Optional; generated from the title when empty.')" />
 
-    <x-admin.field :label="__('Image path')" name="image_path" :value="$item?->image_path" required
-                   :help="__('Path under public/, e.g. assets/images/project-1.jpg')" />
+    <x-admin.media-picker :label="__('Image')" name="image_path" :value="$item?->image_path" required />
 
     <x-admin.field :label="__('Image alt text')" name="image_alt" :value="$item?->image_alt" required />
 

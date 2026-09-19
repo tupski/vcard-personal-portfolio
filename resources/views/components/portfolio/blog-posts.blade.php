@@ -11,7 +11,7 @@
                 <a href="#">
 
                     <figure class="blog-banner-box">
-                        <img src="{{ asset($post['image']) }}"
+                        <img src="{{ App\Support\PortfolioContent::mediaUrl($post['image']) }}"
                              alt="{{ $post['alt'] }}"
                              loading="lazy">
                     </figure>
