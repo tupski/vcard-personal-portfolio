@@ -444,6 +444,7 @@ function check(ok, msg, extra) {
             banner: document.querySelector('.blog-post-banner img')?.getAttribute('src') ?? '',
             bannerAlt: document.querySelector('.blog-post-banner img')?.getAttribute('alt') ?? '',
             bannerWidth: document.querySelector('.blog-post-banner img')?.getAttribute('width') ?? '',
+            bannerHeight: document.querySelector('.blog-post-banner img')?.getAttribute('height') ?? '',
             body: document.querySelector('.blog-post-body')?.textContent ?? '',
             bodyInnerHtml: document.querySelector('.blog-post-body')?.innerHTML ?? '',
             liveScripts: document.querySelectorAll('.blog-post-body script').length,
@@ -465,7 +466,12 @@ function check(ok, msg, extra) {
     check(article.twitterCard === 'summary_large_image', `${tag}: twitter card`, article.twitterCard);
     check(article.banner.length > 0, `${tag}: featured image renders`, article.banner);
     check(article.bannerAlt.length > 0, `${tag}: featured image has alt text`);
-    check(article.bannerWidth === '1200', `${tag}: featured image declares dimensions`);
+    // Phase 9 replaced the hard-coded 1200x675 with the image's real
+    // dimensions, so assert that both attributes are present and numeric
+    // rather than pinning a specific value.
+    check(/^\d+$/.test(article.bannerWidth) && /^\d+$/.test(article.bannerHeight),
+        `${tag}: featured image declares real dimensions`,
+        `${article.bannerWidth}x${article.bannerHeight}`);
     check(article.body.trim().length > 80, `${tag}: article body renders`);
     check(article.liveScripts === 0, `${tag}: body content is inert (no script elements)`);
     check(article.types.includes('BlogPosting'), `${tag}: BlogPosting JSON-LD present`);
@@ -481,6 +487,22 @@ function check(ok, msg, extra) {
 
     // The article body must never contain live markup from stored content.
     check(!/<script/i.test(article.bodyInnerHtml), `${tag}: no script markup in the body`);
+
+    // Phase 9: the featured image is the LCP element, so it must not be lazy.
+    const bannerLoading = await pubPage.$eval('.blog-post-banner img', (el) => el.getAttribute('loading'));
+    check(bannerLoading === 'eager', `${tag}: LCP image is not lazy-loaded`, String(bannerLoading));
+
+    // Every below-the-fold image keeps lazy loading and, where the file's
+    // dimensions are known, declares them.
+    const lazyAudit = await pubPage.evaluate(() => {
+        const imgs = Array.from(document.querySelectorAll('img'));
+        return {
+            total: imgs.length,
+            lazy: imgs.filter((i) => i.getAttribute('loading') === 'lazy').length,
+            sized: imgs.filter((i) => i.hasAttribute('width') && i.hasAttribute('height')).length,
+        };
+    });
+    check(lazyAudit.sized >= 1, `${tag}: images declare width and height`, `${lazyAudit.sized}/${lazyAudit.total}`);
 
     // Back / forward across the Turbo visit must keep the article and its head.
     await pubPage.goBack();

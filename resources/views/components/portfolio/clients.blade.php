@@ -11,7 +11,17 @@
         @foreach ($clients as $logo)
             <li class="clients-item">
                 <a href="#">
-                    <img src="{{ App\Support\PortfolioContent::mediaUrl($logo) }}" alt="client logo" loading="lazy">
+                    {{-- The logos are rendered at `width: 100%` by CSS. Declaring the
+                         intrinsic dimensions does not change the rendered size: CSS
+                         still sets the width, and the height follows the same aspect
+                         ratio the browser would have derived from the file anyway. It
+                         just lets the browser reserve the space up front. --}}
+                    @php([$logoWidth, $logoHeight] = App\Support\PortfolioContent::mediaDimensions($logo))
+                    <img src="{{ App\Support\PortfolioContent::mediaUrl($logo) }}"
+                         alt="{{ __('Client logo') }}"
+                         @if ($logoWidth && $logoHeight) width="{{ $logoWidth }}" height="{{ $logoHeight }}" @endif
+                         loading="lazy"
+                         decoding="async">
                 </a>
             </li>
         @endforeach

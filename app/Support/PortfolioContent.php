@@ -179,6 +179,24 @@ class PortfolioContent
     }
 
     /**
+     * Intrinsic dimensions for a content image path.
+     *
+     * @return array{0: int|null, 1: int|null}
+     */
+    public static function mediaDimensions(?string $path): array
+    {
+        return app(ContentRepository::class)->mediaDimensions($path);
+    }
+
+    /**
+     * Responsive srcset for a content image path, or null.
+     */
+    public static function mediaSrcset(?string $path): ?string
+    {
+        return app(ContentRepository::class)->mediaSrcset($path);
+    }
+
+    /**
      * Contact page map embed.
      */
     public static function mapEmbedUrl(): string

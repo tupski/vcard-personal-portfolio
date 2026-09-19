@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\Setting;
+use App\Support\ContentCache;
+use App\Support\ContentCacheInvalidator;
 use App\Support\ContentRepository;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\View;
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         // Single instance per request: the repository memoises its queries so
         // the many Blade components that consume it never duplicate work.
         $this->app->singleton(ContentRepository::class);
+        $this->app->singleton(ContentCache::class);
 
         // Intervention Image v4 with the GD driver (bundled with PHP, no
         // Imagick requirement — keeps shared hosting workable).
@@ -50,5 +53,9 @@ class AppServiceProvider extends ServiceProvider
         View::composer('*', function ($view): void {
             $view->with('siteName', self::siteName());
         });
+
+        // Public content is cached between requests; any admin save or delete
+        // invalidates it, so an edit is visible on the very next request.
+        $this->app->make(ContentCacheInvalidator::class)->register();
     }
 }

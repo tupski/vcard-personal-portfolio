@@ -34,6 +34,10 @@ class ContentRepository
      */
     private array $memo = [];
 
+    public function __construct(
+        private readonly ContentCache $cache,
+    ) {}
+
     /**
      * Owner identity rendered in the sidebar.
      *
@@ -325,7 +329,7 @@ class ContentRepository
     public function post(string $slug): array
     {
         return $this->memo('post:'.$slug, function () use ($slug): array {
-            $post = BlogPost::findPublishedBySlug($slug);
+            $post = $this->resolvedPost($slug);
 
             return [
                 'title' => $post->title,
@@ -357,7 +361,10 @@ class ContentRepository
     public function relatedPosts(string $slug, int $limit = 3): array
     {
         return $this->memo('related:'.$slug.':'.$limit, function () use ($slug, $limit): array {
-            $post = BlogPost::findPublishedBySlug($slug);
+            // Reuse the already-resolved post when the same request loaded it,
+            // so the detail page does not query the post and its category a
+            // second time just to find out which category to match.
+            $post = $this->resolvedPost($slug);
 
             return BlogPost::query()
                 ->published()
@@ -409,6 +416,35 @@ class ContentRepository
     }
 
     /**
+     * Intrinsic dimensions for a content image path.
+     *
+     * @return array{0: int|null, 1: int|null}
+     */
+    public function mediaDimensions(?string $path): array
+    {
+        return app(MediaService::class)->dimensions((string) $path);
+    }
+
+    /**
+     * Responsive srcset for a content image path, or null.
+     */
+    public function mediaSrcset(?string $path): ?string
+    {
+        return app(MediaService::class)->srcset((string) $path);
+    }
+
+    /**
+     * The Eloquent post for a slug, resolved at most once per request.
+     *
+     * Shared by {@see self::post()} and {@see self::relatedPosts()} so a
+     * detail page loads the post (and its category) exactly once.
+     */
+    private function resolvedPost(string $slug): BlogPost
+    {
+        return $this->memoRequestOnly('post-model:'.$slug, fn (): BlogPost => BlogPost::findPublishedBySlug($slug));
+    }
+
+    /**
      * Memoise a repository result for the current request.
      *
      * @template T
@@ -417,6 +453,43 @@ class ContentRepository
      * @return T
      */
     private function memo(string $key, callable $callback): mixed
+    {
+        if (! array_key_exists($key, $this->memo)) {
+            // Per-request memo first (a page render asks for the same data
+            // from several components), then the shared public cache (every
+            // visitor sees the same content), then the query.
+            $this->memo[$key] = $this->cache->remember($key, $callback);
+        }
+
+        return $this->memo[$key];
+    }
+
+    /**
+     * Drop the in-process memo.
+     *
+     * Called when the public cache is invalidated. Within a normal request the
+     * memo is naturally empty, but a long-running worker (Octane, a queue
+     * worker, an integration test dispatching several requests) would
+     * otherwise keep serving values computed before the edit.
+     */
+    public function forget(): void
+    {
+        $this->memo = [];
+    }
+
+    /**
+     * Memoise for the current request only.
+     *
+     * Used for Eloquent models: they are cheap to keep in memory for one
+     * request, and serialising them into a shared cache would be both wasteful
+     * and fragile.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    private function memoRequestOnly(string $key, callable $callback): mixed
     {
         if (! array_key_exists($key, $this->memo)) {
             $this->memo[$key] = $callback();

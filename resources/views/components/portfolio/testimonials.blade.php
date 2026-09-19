@@ -20,9 +20,11 @@
                          data-action="click->testimonials#open keydown.enter->testimonials#open keydown.space->testimonials#open">
 
                         <figure class="testimonials-avatar-box">
+                            @php([$cardWidth, $cardHeight] = App\Support\PortfolioContent::mediaDimensions($testimonial['avatar']))
                             <img src="{{ App\Support\PortfolioContent::mediaThumbUrl($testimonial['avatar']) }}"
                                  alt="{{ $testimonial['name'] }}"
-                                 width="60"
+                                 width="{{ $cardWidth ?? 60 }}"
+                                 height="{{ $cardHeight ?? 60 }}"
                                  data-testimonials-avatar>
                         </figure>
 
@@ -67,13 +69,22 @@
 
             <div class="modal-img-wrapper">
                 <figure class="modal-avatar-box">
+                    @php([$modalWidth, $modalHeight] = App\Support\PortfolioContent::mediaDimensions($testimonials[0]['avatar']))
                     <img src="{{ App\Support\PortfolioContent::mediaThumbUrl($testimonials[0]['avatar']) }}"
                          alt="{{ $testimonials[0]['name'] }}"
-                         width="80"
+                         width="{{ $modalWidth ?? 80 }}"
+                         height="{{ $modalHeight ?? 80 }}"
                          data-testimonials-target="img">
                 </figure>
 
-                <img src="{{ asset('assets/images/icon-quote.svg') }}" alt="quote icon">
+                {{-- Decorative quote glyph. The file is 34x23; declaring it lets the
+                     browser reserve the space. It carries no meaning beyond decoration,
+                     and the surrounding text already conveys the testimonial. --}}
+                <img src="{{ asset('assets/images/icon-quote.svg') }}"
+                     alt=""
+                     aria-hidden="true"
+                     width="34"
+                     height="23">
             </div>
 
             <div class="modal-content">

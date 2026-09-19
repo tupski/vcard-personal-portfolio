@@ -3,25 +3,28 @@
 namespace App\Support\Seo;
 
 use App\Models\BlogPost;
-use App\Support\ContentRepository;
-use Illuminate\Support\Carbon;
+use App\Support\ContentCache;
 
 /**
  * Builds the XML sitemap from indexable public URLs only.
  *
- * URL sources are providers: today that is the static public route list, and
- * Phase 8 can add published blog detail URLs by extending {@see self::urls()}
- * without touching the XML assembly or the route.
+ * URL sources are providers: the static public route list, and published blog
+ * detail URLs. Phase 10+ can add another content type by adding one provider
+ * method, without touching the XML assembly or the route.
  *
  * Guarantees: absolute URLs from the configured site URL, no admin/login or
  * authenticated pages, no query strings, no duplicates, deterministic
  * ordering, and `lastmod` only where real data provides it (never fabricated).
+ *
+ * The generated document is cached under the public content namespace, so it
+ * is rebuilt only when content changes — a crawler hammering /sitemap.xml does
+ * not re-run the queries behind it.
  */
 class SitemapService
 {
     public function __construct(
         private readonly SeoManager $seo,
-        private readonly ContentRepository $content,
+        private readonly ContentCache $cache,
     ) {}
 
     /**
@@ -29,14 +32,20 @@ class SitemapService
      */
     public function xml(): string
     {
-        $urls = $this->urls();
+        return $this->cache->remember('sitemap.xml', fn (): string => $this->build());
+    }
 
+    /**
+     * Assemble the XML.
+     */
+    private function build(): string
+    {
         $lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
         ];
 
-        foreach ($urls as $entry) {
+        foreach ($this->urls() as $entry) {
             $lines[] = '    <url>';
             $lines[] = '        <loc>'.e($entry['loc']).'</loc>';
 
@@ -65,9 +74,6 @@ class SitemapService
             $entries[] = ['loc' => $this->seo->canonical($name)];
         }
 
-        // Published blog detail URLs. `lastmod` is only attached when the post
-        // was genuinely edited after publication — the timestamp is read from
-        // the row, never derived from "now".
         foreach ($this->blogEntries() as $entry) {
             $entries[] = $entry;
         }
@@ -135,31 +141,5 @@ class SitemapService
         }
 
         return $entries;
-    }
-
-    /**
-     * Newest real content timestamp, or null when nothing is dated yet.
-     */
-    public function lastModified(): ?string
-    {
-        $timestamps = [];
-
-        try {
-            foreach ($this->content->posts() as $post) {
-                if (($post['date_iso'] ?? '') !== '') {
-                    $timestamps[] = $post['date_iso'];
-                }
-            }
-        } catch (\Throwable) {
-            return null;
-        }
-
-        if ($timestamps === []) {
-            return null;
-        }
-
-        rsort($timestamps);
-
-        return Carbon::parse($timestamps[0])->toDateString();
     }
 }

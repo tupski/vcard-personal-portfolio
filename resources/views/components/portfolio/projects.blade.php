@@ -72,9 +72,13 @@
                             <x-portfolio-icon name="eye-outline" />
                         </div>
 
+                        @php([$pw, $ph] = App\Support\PortfolioContent::mediaDimensions($project['image']))
                         <img src="{{ App\Support\PortfolioContent::mediaUrl($project['image']) }}"
+                             @if (App\Support\PortfolioContent::mediaSrcset($project['image'])) srcset="{{ App\Support\PortfolioContent::mediaSrcset($project['image']) }}" @endif
                              alt="{{ $project['alt'] }}"
-                             loading="lazy">
+                             @if ($pw && $ph) width="{{ $pw }}" height="{{ $ph }}" @endif
+                             loading="lazy"
+                             decoding="async">
                     </figure>
 
                     <h3 class="project-title">{{ $project['title'] }}</h3>

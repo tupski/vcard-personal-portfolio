@@ -37,13 +37,23 @@
         </div>
 
         @if ($post['image'])
+            @php
+                [$imgW, $imgH] = App\Support\PortfolioContent::mediaDimensions($post['image']);
+                $imgSrcset = App\Support\PortfolioContent::mediaSrcset($post['image']);
+            @endphp
+
             <figure class="blog-post-banner">
-                {{-- The featured image is the page's largest paint, so it is
-                     loaded eagerly rather than lazily. --}}
+                {{-- The featured image is the page's largest paint (LCP), so it
+                     is loaded eagerly with high priority rather than lazily.
+                     Dimensions come from the real file, which reserves the
+                     space and keeps layout shift at zero. --}}
                 <img src="{{ App\Support\PortfolioContent::mediaUrl($post['image']) }}"
+                     @if ($imgSrcset) srcset="{{ $imgSrcset }}" sizes="(min-width: 1024px) 800px, 100vw" @endif
                      alt="{{ $post['alt'] }}"
-                     width="1200"
-                     height="675">
+                     @if ($imgW && $imgH) width="{{ $imgW }}" height="{{ $imgH }}" @endif
+                     loading="eager"
+                     fetchpriority="high"
+                     decoding="async">
             </figure>
         @endif
 

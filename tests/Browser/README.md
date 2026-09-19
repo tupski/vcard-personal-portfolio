@@ -30,7 +30,7 @@ DOM state (`page.waitForFunction`) for Turbo visits that restore from the
 snapshot cache without any network request — so it is deterministic, with no
 arbitrary sleeps and no `waitForTimeout` anywhere.
 
-287 checks: login, dashboard metrics, Turbo navigation over all 15 admin
+289 checks: login, dashboard metrics, Turbo navigation over all 15 admin
 sections, history back/forward, active-nav state, full CRUD round trip
 reflected on the public frontend through the content layer, server-side
 validation with old input, visibility toggles, delete confirmation dialog,
@@ -48,6 +48,8 @@ plus the blog detail flow — listing links to slug URLs, Turbo navigation into
 an article, article body/featured image/related posts/back affordance, article
 Open Graph and canonical, BlogPosting JSON-LD, inert article content, browser
 back/forward/hard refresh, a 404 for an unknown slug, the published slug in
-the sitemap, and a six-viewport responsive sweep of the detail page.
+the sitemap, a six-viewport responsive sweep of the detail page, and the
+Phase 9 image policy (the LCP image is eagerly loaded, below-the-fold images
+declare width/height and lazy-load).
 
 Admin credentials come from the seeded `ADMIN_*` env values.

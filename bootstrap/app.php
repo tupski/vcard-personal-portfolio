@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CachePublicResponse;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Conditional requests (ETag/304) for public pages. Appended rather
+        // than replacing the group so the default web stack is untouched.
+        $middleware->web(append: [
+            CachePublicResponse::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -32,6 +32,16 @@ class MediaService
 
     public const MEDIUM_WIDTH = 640;
 
+    /**
+     * Per-request media lookup cache, keyed by stored path.
+     *
+     * A page renders the same image through url(), dimensions() and srcset();
+     * without this each call would re-query the media table.
+     *
+     * @var array<string, Media|null>
+     */
+    private array $mediaCache = [];
+
     public function __construct(private readonly ImageManager $images) {}
 
     /**
@@ -128,6 +138,114 @@ class MediaService
     public function mediumUrl(string $path): string
     {
         return $this->variantUrl($path, 'mediumPath');
+    }
+
+    /**
+     * Intrinsic dimensions for a content image path, or nulls when unknown.
+     *
+     * Used to emit width/height so the browser reserves the right space before
+     * the image arrives (no layout shift). Values come from the media record
+     * when the image was uploaded, otherwise from the committed manifest of
+     * static template assets — never from a filesystem read at render time.
+     *
+     * @return array{0: int|null, 1: int|null}
+     */
+    public function dimensions(string $path): array
+    {
+        if ($path === '') {
+            return [null, null];
+        }
+
+        if (str_starts_with($path, 'assets/')) {
+            $manifest = (array) config('media.dimensions', []);
+
+            if (isset($manifest[$path]) && is_array($manifest[$path])) {
+                return [(int) $manifest[$path][0], (int) $manifest[$path][1]];
+            }
+
+            return [null, null];
+        }
+
+        $media = $this->mediaFor($path);
+
+        if ($media === null) {
+            return [null, null];
+        }
+
+        return [$media->width, $media->height];
+    }
+
+    /**
+     * A responsive `srcset` for a content image, or null when there is nothing
+     * useful to offer.
+     *
+     * Only real, existing variants are listed, so a `srcset` never points at a
+     * 404 and the browser never downloads a variant that does not exist. Static
+     * template assets have exactly one rendition, so they get no `srcset` — the
+     * markup stays byte-identical to Phase 2 for them.
+     */
+    public function srcset(string $path): ?string
+    {
+        if ($path === '' || str_starts_with($path, 'assets/')) {
+            return null;
+        }
+
+        $media = $this->mediaFor($path);
+
+        if ($media === null) {
+            return null;
+        }
+
+        $disk = Storage::disk($media->disk);
+
+        $candidates = [];
+
+        // The medium variant is 640w; the original keeps its own width.
+        if ($disk->exists($media->mediumPath()) && $media->width !== null) {
+            $candidates['640w'] = $disk->url($media->mediumPath());
+        }
+
+        $width = $this->measureWidth($media);
+
+        if ($width !== null) {
+            $candidates[$width.'w'] = $media->url();
+        }
+
+        if (count($candidates) < 2) {
+            return null;
+        }
+
+        $parts = [];
+
+        foreach ($candidates as $descriptor => $url) {
+            $parts[] = $url.' '.$descriptor;
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * The media record for a stored path, resolved at most once per request.
+     */
+    private function mediaFor(string $path): ?Media
+    {
+        if (! array_key_exists($path, $this->mediaCache)) {
+            $this->mediaCache[$path] = Media::query()->where('path', $path)->first();
+        }
+
+        return $this->mediaCache[$path];
+    }
+
+    /**
+     * Width of the stored original, preferring the recorded value.
+     */
+    private function measureWidth(Media $media): ?int
+    {
+        if ($media->width !== null && $media->width > 0) {
+            return $media->width;
+        }
+
+        return null;
     }
 
     /**

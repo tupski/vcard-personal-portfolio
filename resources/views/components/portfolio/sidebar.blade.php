@@ -15,9 +15,11 @@
     <div class="sidebar-info">
 
         <figure class="avatar-box">
+            @php([$avatarWidth, $avatarHeight] = App\Support\PortfolioContent::mediaDimensions($profile['avatar']))
             <img src="{{ App\Support\PortfolioContent::mediaThumbUrl($profile['avatar']) }}"
                  alt="{{ $profile['name'] }}"
-                 width="80">
+                 width="{{ $avatarWidth ?? 80 }}"
+                 height="{{ $avatarHeight ?? 80 }}">
         </figure>
 
         <div class="info-content">

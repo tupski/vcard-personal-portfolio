@@ -23,3 +23,46 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# ---------------------------------------------------------------------------
+# Static asset caching (Phase 9)
+# ---------------------------------------------------------------------------
+#
+# Vite fingerprints every file it emits (app-<hash>.js, frontend-<hash>.css),
+# so a build asset's URL changes whenever its content does. That makes a long
+# max-age safe and is what removes the repeat-download Lighthouse flagged.
+#
+# The template's own images under /assets are NOT fingerprinted, so they get a
+# shorter lifetime with revalidation instead — long enough to help, short
+# enough that replacing a file is picked up without a hard refresh.
+#
+# Guarded by IfModule so the file stays harmless where mod_headers is absent.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(woff2?|ttf|eot)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    <IfModule mod_rewrite.c>
+        RewriteEngine On
+
+        # Fingerprinted build output: safe to cache forever.
+        RewriteRule ^build/ - [E=ASSET_KIND:hashed]
+
+        # Un-hashed template assets: cache but revalidate.
+        RewriteRule ^assets/ - [E=ASSET_KIND:static]
+    </IfModule>
+
+    <FilesMatch "\.(js|css)$">
+        Header set Cache-Control "public, max-age=31536000, immutable" env=ASSET_KIND=hashed
+        Header set Cache-Control "public, max-age=604800" env=ASSET_KIND=static
+    </FilesMatch>
+
+    <FilesMatch "\.(png|jpe?g|gif|webp|avif|svg|ico)$">
+        Header set Cache-Control "public, max-age=604800" env=ASSET_KIND=static
+        Header set Cache-Control "public, max-age=31536000, immutable" env=ASSET_KIND=hashed
+    </FilesMatch>
+
+    # The HTML documents themselves are handled by the application
+    # (ETag + private, no-cache, must-revalidate) and must not be overridden
+    # here, because they carry a session and per-visitor flash state.
+</IfModule>

@@ -11,9 +11,13 @@
                 <a href="{{ $post['url'] }}">
 
                     <figure class="blog-banner-box">
+                        @php([$bw, $bh] = App\Support\PortfolioContent::mediaDimensions($post['image']))
                         <img src="{{ App\Support\PortfolioContent::mediaUrl($post['image']) }}"
+                             @if (App\Support\PortfolioContent::mediaSrcset($post['image'])) srcset="{{ App\Support\PortfolioContent::mediaSrcset($post['image']) }}" @endif
                              alt="{{ $post['alt'] }}"
-                             loading="lazy">
+                             @if ($bw && $bh) width="{{ $bw }}" height="{{ $bh }}" @endif
+                             loading="lazy"
+                             decoding="async">
                     </figure>
 
                     <div class="blog-content">
